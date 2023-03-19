@@ -1,0 +1,196 @@
+{
+  "class_name": "TIG21",
+  "days": [
+    {
+      "day": "Montag",
+      "lessons": [
+        "None",
+        {
+          "AandB": {
+            "time": 3,
+            "subject": "Deu",
+            "room": "B6",
+            "teacher": "Siegel"
+          }
+        },
+        {
+          "AandB": {
+            "time": 5,
+            "subject": "Kunst",
+            "room": "A06",
+            "teacher": "Bartneck"
+          }
+        },
+        {
+          "AandB": {
+            "time": 7,
+            "subject": "WlR",
+            "room": "B12",
+            "teacher": "Große"
+          }
+        },
+        "None"
+      ]
+    },
+    {
+      "day": "Dienstag",
+      "lessons": [
+        "None",
+        {
+          "AandB": {
+            "time": 3,
+            "subject": "LK-Ma",
+            "room": "B13",
+            "teacher": "Opitz"
+          }
+        },
+        {
+          "AandB": {
+            "time": 5,
+            "subject": "En",
+            "room": "A03",
+            "teacher": "Wiedeman"
+          }
+        },
+        {
+          "AandB": {
+            "time": 7,
+            "subject": "IS",
+            "room": "B3",
+            "teacher": "Wittkopf"
+          }
+        },
+        {
+          "AandB": {
+            "time": 9,
+            "subject": "Sp",
+            "room": "SSB",
+            "teacher": "Müller"
+          }
+        }
+      ]
+    },
+    {
+      "day": "Mittwoch",
+      "lessons": [
+        {
+          "B": {
+            "time": 1,
+            "subject": "Eng",
+            "room": "B03",
+            "teacher": "Wiedeman"
+          }
+        },
+        {
+          "AandB": {
+            "time": 3,
+            "subject": "Ge",
+            "room": "B10",
+            "teacher": ""
+          }
+        },
+        {
+          "AandB": {
+            "time": 5,
+            "subject": "IS",
+            "room": "B3",
+            "teacher": "Wittkopf"
+          }
+        },
+        {
+          "AandB": {
+            "time": 7,
+            "subject": "PHY",
+            "room": "B112",
+            "teacher": "Starke"
+          }
+        },
+        "None"
+      ]
+    },
+    {
+      "day": "Donnerstag",
+      "lessons": [
+        {
+          "AandB": {
+            "time": 1,
+            "subject": "Deu",
+            "room": "B06",
+            "teacher": "Siegel"
+          }
+        },
+        {
+          "AandB": {
+            "time": 3,
+            "subject": "LK-MA1",
+            "room": "",
+            "teacher": ""
+          }
+        },
+        {
+          "AandB": {
+            "time": 5,
+            "subject": "Reli",
+            "room": "",
+            "teacher": "Ludwig"
+          }
+        },
+        "None",
+        "None"
+      ]
+    },
+    {
+      "day": "Freitag",
+      "lessons": [
+        {
+          "AorB": [
+            {
+              "time": 1,
+              "subject": "LK-MA1",
+              "room": "B13",
+              "teacher": "Opitz"
+            },
+            {
+              "time": 1,
+              "subject": "Ge",
+              "room": "",
+              "teacher": ""
+            }
+          ]
+        },
+        {
+          "AandB": {
+            "time": 3,
+            "subject": "IS",
+            "room": "",
+            "teacher": "Wittkopf"
+          }
+        },
+        "None",
+        {
+          "AandB": {
+            "time": 7,
+            "subject": "Chemie",
+            "room": "",
+            "teacher": "Höhn"
+          }
+        },
+        "None"
+      ]
+    }
+  ],
+  "subjects": [
+    "DEU1",
+    "BK2",
+    "WLR3",
+    "SP1",
+    "ENG2",
+    "GGK3",
+    "LK-MA1",
+    "IS",
+    "PHY1",
+    "REL",
+    "CH2",
+    "_fä.verb."
+  ]
+}
