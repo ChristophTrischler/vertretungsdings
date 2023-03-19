@@ -119,72 +119,81 @@ pub fn get_vday(text: &String,last_date: &mut NaiveDate) -> Option<VDay> {
 }
 
 
-// pub fn get_day(VDay(day_str, v_lessons): &VDay, plan :&Plan)->Day{
-//     let mut splits =  day_str.split_whitespace().into_iter();
-//     let day_name = splits.next().unwrap();
-//     let date_str =  splits.next().unwrap();
+pub fn get_day(VDay(day_str, v_lessons): &VDay, plan :&Plan)->Day{
+    let mut splits =  day_str.split_whitespace().into_iter();
+    let day_name = splits.next().unwrap();
+    let date_str =  splits.next().unwrap();
 
-//     let date = NaiveDate::parse_from_str(date_str, "%d.%m.%Y").unwrap();
-//     let ref_date = NaiveDate::from_ymd_opt(2022, 8, 22).unwrap();
-//     let week = date.signed_duration_since(ref_date).num_weeks() % 2 + 1;
+    let date = NaiveDate::parse_from_str(date_str, "%d.%m.%Y").unwrap();
+    let ref_date = NaiveDate::from_ymd_opt(2022, 8, 22).unwrap();
+    let week = date.signed_duration_since(ref_date).num_weeks() % 2 + 1;
 
-//     let mut res_day:Day = Day::new(&day_str.as_str());
+    let mut res_day:Day = Day::new(&day_str.as_str());
 
-//     for v_lesson in v_lessons.iter().
-//     filter(|item| item.class.contains(&plan.class_name) && is_in(&item.subject, &plan.subjects)){
-//         res_day.lessons.get_mut((v_lesson.time-1) as usize)
-//         .unwrap()
-//         .push(v_lesson.clone());      
-//     }
+    for v_lesson in v_lessons.iter().
+    filter(|item| item.class.contains(&plan.class_name) && is_in(&item.subject, &plan.subjects)){
+        res_day.lessons.get_mut((v_lesson.time-1) as usize)
+        .unwrap()
+        .push(v_lesson.clone());      
+    }
 
-//     let plan_day = plan.days.iter()
-//     .find(|item| item.day.contains(day_name))
-//     .unwrap();
-//     let empty_times = res_day.lessons.iter_mut()
-//     .enumerate()
-//     .filter(|(i, item)| i%2==0 && item.len()==0);
+    let plan_day = plan.days.iter()
+    .find(|item| item.day.contains(day_name))
+    .unwrap();
+    let empty_times = res_day.lessons.iter_mut()
+    .enumerate()
+    .filter(|(i, item)| i%2==0 && item.len()==0);
  
-//     for (i, ls) in empty_times {
-//         let normal = plan_day.lessons.get(i/2).unwrap();
-//         match normal {
-//             WeekOption::AandB(l) => ls.push(l.to_lesson()),
-//             WeekOption::A(l) => if week == 1 {
-//                 ls.push(l.to_lesson());
-//             },
-//             WeekOption::B(l) => if week == 2 {
-//                 ls.push(l.to_lesson());
-//             },
-//             WeekOption::AorB(l1, l2) => if week == 1{
-//                 ls.push(l1.to_lesson());
-//             }
-//             else {
-//                 ls.push(l2.to_lesson());
-//             },
-//             WeekOption::None => (),   
-//         }   
-//     };
-//     return res_day; 
-// } 
+    for (i, ls) in empty_times {
+        let normal = plan_day.lessons.get(i/2).unwrap();
+        match normal {
+            WeekOption::AandB(l) => ls.push(l.to_lesson()),
+            WeekOption::A(l) => if week == 1 {
+                ls.push(l.to_lesson());
+            },
+            WeekOption::B(l) => if week == 2 {
+                ls.push(l.to_lesson());
+            },
+            WeekOption::AorB(l1, l2) => if week == 1{
+                ls.push(l1.to_lesson());
+            }
+            else {
+                ls.push(l2.to_lesson());
+            },
+            WeekOption::None => (),   
+        }   
+    };
+    return res_day; 
+} 
 
 
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// pub struct PlanLesson{
-//     time: i64,
-//     subject: String,
-//     room: String,
-//     teacher: String
-// }
+fn is_in(string: &str, vec: &Vec<String>)->bool{
+    for s in vec{
+        if string.contains(s) {
+            return true;
+        }
+    }
+    return false;
+}
 
-// impl PlanLesson {
-//     pub fn to_lesson(&self)->Lesson{
-//         Lesson::new(
-//             self.time,
-//             self.subject.as_str(),
-//             self.room.as_str(),
-//             self.teacher.as_str()
-//         )
-//     }
-// }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanLesson{
+    time: i64,
+    subject: String,
+    room: String,
+    teacher: String
+}
+
+impl PlanLesson {
+    pub fn to_lesson(&self)->Lesson{
+        Lesson::new(
+            self.time,
+            self.subject.as_str(),
+            self.room.as_str(),
+            self.teacher.as_str()
+        )
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Lesson {
@@ -198,17 +207,17 @@ pub struct Lesson {
 }
 
 impl Lesson {
-    // fn new(time: i64, subject: &str, room: &str, teacher: &str)->Lesson{
-    //     Lesson { 
-    //         class: String::new(), 
-    //         time: time, 
-    //         subject: subject.to_string(), 
-    //         room: room.to_string(), 
-    //         teacher: teacher.to_string(), 
-    //         vtype: String::new(), 
-    //         message: String::new() 
-    //     }
-    // }
+    fn new(time: i64, subject: &str, room: &str, teacher: &str)->Lesson{
+        Lesson { 
+            class: String::new(), 
+            time: time, 
+            subject: subject.to_string(), 
+            room: room.to_string(), 
+            teacher: teacher.to_string(), 
+            vtype: String::new(), 
+            message: String::new() 
+        }
+    }
 
     fn to_vec(&self) -> Vec<String>{
         vec![self.class.to_string(), self.time.to_string(), self.subject.to_string(), 
@@ -216,45 +225,43 @@ impl Lesson {
     }
 }
 
-// #[derive(Serialize, Deserialize, Debug, Clone)]
-// pub struct Plan {
-//     pub class_name: String,
-//     pub days: Vec<PlanDay>,
-//     pub subjects: Vec<String>
-// }
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Plan {
+    pub class_name: String,
+    pub days: Vec<PlanDay>,
+    pub subjects: Vec<String>
+}
 
-// #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-// pub enum WeekOption {
-//     #[default]
-//     None,
-//     AandB(PlanLesson),
-//     A(PlanLesson),
-//     B(PlanLesson),
-//     AorB(PlanLesson, PlanLesson),
-// }
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub enum WeekOption {
+    #[default]
+    None,
+    AandB(PlanLesson),
+    A(PlanLesson),
+    B(PlanLesson),
+    AorB(PlanLesson, PlanLesson),
+}
 
-// #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-// pub struct PlanDay{
-//     pub day: String, 
-//     pub lessons: [WeekOption; 5]
-// } 
-
-
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct PlanDay{
+    pub day: String, 
+    pub lessons: [WeekOption; 5]
+} 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VDay(String, Vec<Lesson>);
 
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// pub struct Day {  
-//     pub day: String,
-//     pub lessons: [Vec<Lesson>; 10]
-// }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Day {  
+    pub day: String,
+    pub lessons: [Vec<Lesson>; 10]
+}
 
-// impl Day {
-//     pub fn new(day: &str) -> Day{
-//         Day {
-//             day: day.to_string(),
-//             lessons: Default::default()
-//         }
-//     }
-// }
+impl Day {
+    pub fn new(day: &str) -> Day{
+        Day {
+            day: day.to_string(),
+            lessons: Default::default()
+        }
+    }
+}
