@@ -1,14 +1,14 @@
 mod vertretundsdings;
 mod check_loop;
 
-use actix_web::{*, web::Path};
+use actix_web::{*, web::{Path, Json}};
 use actix_web::web::Data;
 
 use uuid::Uuid;
 
 use std::sync::{Arc, Mutex};
 
-use vertretundsdings::vertretungsdings::{VDay};
+use vertretundsdings::vertretungsdings::{VDay, Plan, get_day, Day};
 use check_loop::init_vday_cache;
 
 pub type VdayCache = Mutex<Vec<VDay>>;
@@ -34,6 +34,14 @@ async fn get_vdays(vdays: Data<VdayCache>)-> actix_web::Result<impl Responder>{
     Ok(HttpResponse::Ok().json(data))
 }
 
+#[post("/days")]
+async fn get_days(plan: Json<Plan>, vdays_data: Data<VdayCache>) -> impl Responder {
+    let vdays = vdays_data.try_lock().unwrap().clone();
+    let days: Vec<Day> = vdays.iter().map(|v| get_day(v, &plan)).collect();
+    println!("{:?}", days);
+    HttpResponse::Ok().json(days)
+}
+
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -52,6 +60,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .service(get_vdays)
             .service(updated)
+            .service(get_days)
     })
     .bind(("0.0.0.0", 8000))?
     .run()
