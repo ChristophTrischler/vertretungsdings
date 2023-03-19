@@ -14,7 +14,7 @@ services:
 
   bot:
     image:
-      christophtrischler/vertretungsbot
+      christophtrischler/vertretungsbot:rpi
     build: 
       context: vertretungsbot
       dockerfile: Dockerfile
@@ -24,7 +24,7 @@ services:
 
   api: 
     image:
-      christophtrischler/vertretungsapi
+      christophtrischler/vertretungsapi:rpi
     build: 
       context: vertretungsapi
       dockerfile: Dockerfile
