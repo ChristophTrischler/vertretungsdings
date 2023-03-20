@@ -31,11 +31,6 @@ impl TypeMapKey for DBConnection {
     type Value = Arc<PgPool>;
 }
 
-pub struct Test;
-impl TypeMapKey for Test {
-    type Value = bool;
-}
-
 struct Handler;
 
 
@@ -52,8 +47,6 @@ impl EventHandler for Handler {
 
     async fn resume(&self, ctx: Context, _: ResumedEvent) {
         info!("Resumed");
-        let mut data = ctx.data.write().await;
-        data.insert::<Test>(true);
     }
 }
 
@@ -114,7 +107,6 @@ async fn main() {
             )
             .await.expect("error to connect to DB"))
         );
-        data.insert::<Test>(false);
     }        
     let shard_manager = client.shard_manager.clone();
 
