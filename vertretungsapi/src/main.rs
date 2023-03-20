@@ -3,6 +3,7 @@ mod check_loop;
 
 use actix_web::{*, web::{Path, Json}};
 use actix_web::web::Data;
+use actix_cors::Cors;
 
 use uuid::Uuid;
 
@@ -57,6 +58,11 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(Data::from(Arc::clone(&vdays)))
             .app_data(Data::from(Arc::clone(&updated_list)))
+            .wrap(
+                Cors::default()
+                .allow_any_origin()
+                .allow_any_method()
+            )
             .wrap(middleware::Logger::default())
             .service(get_vdays)
             .service(updated)
