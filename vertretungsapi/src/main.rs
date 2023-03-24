@@ -6,7 +6,7 @@ use actix_web::web::Data;
 use actix_cors::Cors;
 
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions, PgPool};
-use sqlx::{Row};
+use sqlx::Row;
 use uuid::Uuid;
 
 use std::sync::{Arc, Mutex};
@@ -94,7 +94,13 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(Data::from(Arc::clone(&vdays)))
             .app_data(Data::from(Arc::clone(&updated_list)))
+            .app_data(Data::from(Arc::clone(&pg_pool)))
             .wrap(middleware::Logger::default())
+            .wrap(
+                Cors::default()
+                .allow_any_origin()
+                .allow_any_method() 
+            )
             .service(get_vdays)
             .service(updated)
             .service(get_days)
