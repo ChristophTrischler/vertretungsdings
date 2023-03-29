@@ -3,6 +3,7 @@ use scraper::{Html, Selector};
 use std::env;
 use serde::{Deserialize, Serialize};
 use chrono::naive::NaiveDate;
+use itertools::Itertools;
 
 #[derive(Debug)]
 pub enum ChangeOption<T> {
@@ -47,7 +48,7 @@ pub async fn check_change(number: i64, last_time :&mut String, last_date: &mut N
         None => return ChangeOption::None,
     };
 
-    return match last_time.as_str().eq(this_time.as_str()) {
+    return match last_time.to_string().eq(this_time.as_str()) {
         true => ChangeOption::Same(vday),
         false => {
             *last_time = this_time.to_string();
@@ -114,6 +115,9 @@ pub fn get_vday(text: &String,last_date: &mut NaiveDate) -> Option<VDay> {
             message: content_fields.get(6).unwrap().into()
         });
     }
+    v_lessons = v_lessons.into_iter()
+    .unique_by(Lesson::convert_to_compareable)
+    .collect();
 
     return Some(VDay(date, v_lessons.into()));
 }
@@ -128,10 +132,10 @@ pub fn get_day(VDay(day_str, v_lessons): &VDay, plan :&Plan)->Day{
     let ref_date = NaiveDate::from_ymd_opt(2022, 8, 22).unwrap();
     let week = date.signed_duration_since(ref_date).num_weeks() % 2 + 1;
 
-    let mut res_day:Day = Day::new(&day_str.as_str());
+    let mut res_day:Day = Day::new(&day_str.to_string());
 
-    for v_lesson in v_lessons.iter().
-    filter(|item| item.class.contains(&plan.class_name) && is_in(&item.subject, &plan.subjects)){
+    for v_lesson in v_lessons.iter()
+    .filter(|item| item.class.contains(&plan.class_name) && is_in(&item.subject, &plan.subjects)){
         res_day.lessons.get_mut((v_lesson.time-1) as usize)
         .unwrap()
         .push(v_lesson.clone());      
@@ -217,6 +221,18 @@ impl Lesson {
             vtype: String::new(), 
             message: String::new() 
         }
+    }
+
+    fn convert_to_compareable(&self) -> (String, String, String, String, String, String, i32){
+        (
+            self.class.to_string(),
+            self.subject.to_string(),
+            self.room.to_string(),
+            self.teacher.to_string(),
+            self.vtype.to_string(), 
+            self.message.to_string(),
+            ((self.time + 1) / 2) as i32
+        )
     }
 
     fn to_vec(&self) -> Vec<String>{

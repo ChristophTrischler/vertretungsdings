@@ -45,7 +45,7 @@ impl EventHandler for Handler {
         });
     }
 
-    async fn resume(&self, ctx: Context, _: ResumedEvent) {
+    async fn resume(&self, _: Context, _: ResumedEvent) {
         info!("Resumed");
     }
 }
