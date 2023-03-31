@@ -21,8 +21,11 @@ services:
     working_dir: /vertretungsbot
     env_file:
       - .env
+<<<<<<< HEAD
     depends_on:
       - db
+=======
+>>>>>>> 206502712b0b1155e5cc4d4eec0efa02774defdf
 
   api: 
     image:
@@ -34,6 +37,10 @@ services:
     ports:
       - 8000:8000
     env_file:
+<<<<<<< HEAD
      - .env
     depends_on:
       - db 
+=======
+     - .env
+>>>>>>> 206502712b0b1155e5cc4d4eec0efa02774defdf
