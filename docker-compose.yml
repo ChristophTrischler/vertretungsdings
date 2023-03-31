@@ -1,0 +1,39 @@
+version: "3.7"
+services:
+  db:
+    image: postgres
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: vertretungsdings
+    volumes: 
+      - ./postgres-data:/var/lib/postgresql/data
+      - ./sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+
+  bot:
+    image:
+      christophtrischler/vertretungsbot
+    build: 
+      context: vertretungsbot
+      dockerfile: Dockerfile
+    working_dir: /vertretungsbot
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  api: 
+    image:
+      christophtrischler/vertretungsapi
+    build: 
+      context: vertretungsapi
+      dockerfile: Dockerfile
+    working_dir: /vertretungsapi
+    ports:
+      - 8000:8000
+    env_file:
+     - .env
+    depends_on:
+      - db 
