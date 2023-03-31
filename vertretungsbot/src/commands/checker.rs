@@ -2,7 +2,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serenity::model::id::UserId;
-use serenity::{prelude::*};
+use serenity::{prelude::*, CacheAndHttp};
+use tokio::task::JoinHandle;
+use tokio::time::sleep;
+use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 use sqlx::{Row};
 use reqwest::Client;
@@ -12,13 +15,31 @@ use std::env;
 use crate::vertretung::vertretungsdings::{Plan, get_day, VDay};
 
 
-use crate::DBConnection;    
+use crate::DBConnection;
 
-pub async fn check_loop(arc_ctx: Arc<Context>){
+
+pub fn init_check_loop(arc_http: Arc<CacheAndHttp>, arc_data: Arc<RwLock<TypeMap>>) -> (JoinHandle<()>, CancellationToken){
+    
+    let cancel_token = CancellationToken::new();
+    (
+        tokio::spawn(
+            check_loop(
+                arc_http, 
+                arc_data, 
+                cancel_token.clone()
+            )
+        ),
+        cancel_token
+    )
+    
+}
+
+async fn check_loop(arc_http: Arc<CacheAndHttp>, arc_data: Arc<RwLock<TypeMap>>,cancel_token: CancellationToken){
     let min15 = Duration::from_secs(60);
     let client = Client::new();
     let id = Uuid::new_v4().to_string();
     let base_url = env::var("API_HOST").unwrap();
+    let http = arc_http.as_ref();
     loop {
         let update = client.get(format!("{base_url}/update/{id}"))
         .send()
@@ -37,9 +58,8 @@ pub async fn check_loop(arc_ctx: Arc<Context>){
             .await
             .unwrap();
 
-            let ctx: &Context = arc_ctx.as_ref();
             let connection = {
-                let data_read = ctx.data.read().await;
+                let data_read = arc_data.read().await;
                 data_read.get::<DBConnection>().unwrap().clone()
             };
 
@@ -56,7 +76,7 @@ pub async fn check_loop(arc_ctx: Arc<Context>){
                 let data = row.try_get(2).unwrap();
 
                 let user = UserId(id as u64)
-                .to_user(ctx)
+                .to_user(http)
                 .await
                 .unwrap();
                 
@@ -66,7 +86,7 @@ pub async fn check_loop(arc_ctx: Arc<Context>){
                     let day = get_day(vday, &plan); 
 
 
-                    if let Err(why) = user.direct_message(ctx,|m|{
+                    if let Err(why) = user.direct_message(http,|m|{
                         if embed_activated {
                             day.to_embed(m);
                             m
@@ -84,7 +104,16 @@ pub async fn check_loop(arc_ctx: Arc<Context>){
         
         info!("checked for updates");
 
-        tokio::time::sleep(min15).await;    
+        tokio::select! {
+            _ = sleep(min15) => {
+                continue;
+            }
+
+            _ = cancel_token.cancelled() => {
+                info!("gracefully shutting down cache purge job");
+                break;
+            }
+        };
     }
 
 }

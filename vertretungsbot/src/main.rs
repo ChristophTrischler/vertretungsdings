@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use std::env;
 use std::sync::Arc;
 
+use commands::checker::init_check_loop;
 use serenity::async_trait;
 use serenity::client::bridge::gateway::ShardManager;
 use serenity::framework::standard::macros::{group};
@@ -19,7 +20,6 @@ use sqlx::{postgres::{PgPool,PgPoolOptions, PgConnectOptions}};
 use crate::commands::send_plan::*;
 use crate::commands::update::*;
 use crate::commands::setter::*;
-use crate::commands::checker::check_loop;
 pub struct ShardManagerContainer;
 
 impl TypeMapKey for ShardManagerContainer {
@@ -36,13 +36,8 @@ struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, ctx: Context, ready: Ready) {
+    async fn ready(&self, _: Context, ready: Ready) {
         info!("Connected as {}", ready.user.name);
-        let arc_ctx = Arc::new(ctx);
-        tokio::spawn(async move{
-            check_loop(arc_ctx.clone()).await;
-            error!("loop stoped")
-        });
     }
 
     async fn resume(&self, _: Context, _: ResumedEvent) {
@@ -110,9 +105,18 @@ async fn main() {
     }        
     let shard_manager = client.shard_manager.clone();
 
+    
+
+    let (loop_handle, loop_stop) = init_check_loop(
+        Arc::clone(&client.cache_and_http),
+        Arc::clone(&client.data)
+    );
+
     tokio::spawn(async move {   
         tokio::signal::ctrl_c().await.expect("Could not register ctrl+c handler");  
         shard_manager.lock().await.shutdown_all().await;
+        loop_stop.cancel();
+        loop_handle.await.expect("couldn't stop loop nice");
     });
 
     if let Err(why) = client.start().await {

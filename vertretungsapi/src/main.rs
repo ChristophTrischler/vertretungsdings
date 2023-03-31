@@ -110,7 +110,7 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await?;
     cancel_token.cancel();
-    handle.await.unwrap();
+    handle.await?;
     log::info!("application successfully shut down gracefully");
     Ok(())
 }
