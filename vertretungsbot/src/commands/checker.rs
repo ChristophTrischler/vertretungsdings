@@ -14,8 +14,9 @@ use std::env;
 
 use crate::vertretung::vertretungsdings::{Plan, get_day, VDay};
 
-
 use crate::DBConnection;
+
+const MIN: std::time::Duration = Duration::from_secs(10);
 
 
 pub fn init_check_loop(arc_http: Arc<CacheAndHttp>, arc_data: Arc<RwLock<TypeMap>>) -> (JoinHandle<()>, CancellationToken){
@@ -35,7 +36,6 @@ pub fn init_check_loop(arc_http: Arc<CacheAndHttp>, arc_data: Arc<RwLock<TypeMap
 }
 
 async fn check_loop(arc_http: Arc<CacheAndHttp>, arc_data: Arc<RwLock<TypeMap>>,cancel_token: CancellationToken){
-    let min15 = Duration::from_secs(60);
     let client = Client::new();
     let id = Uuid::new_v4().to_string();
     let base_url = env::var("API_HOST").unwrap();
@@ -105,7 +105,7 @@ async fn check_loop(arc_http: Arc<CacheAndHttp>, arc_data: Arc<RwLock<TypeMap>>,
         info!("checked for updates");
 
         tokio::select! {
-            _ = sleep(min15) => {
+            _ = sleep(MIN) => {
                 continue;
             }
 

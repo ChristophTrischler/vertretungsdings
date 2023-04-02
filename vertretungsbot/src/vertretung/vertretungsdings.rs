@@ -106,12 +106,12 @@ impl Lesson {
     }
     fn to_embed(&self)->CreateEmbed{
         let fields = vec![
-            ("Fach",&self.subject,false),
-            ("Raum",&self.room,false),
-            ("Lehrer", &self.teacher,false),
-            ("Art", &self.vtype,false),
-            ("Mitteilung", &self.message,false)
-        ].into_iter().filter(|i|i.1.len()>0);
+            ("Fach",&self.subject,true),
+            ("Raum",&self.room,true),
+            ("Lehrer", &self.teacher,true),
+            ("Art", &self.vtype,true),
+            ("Mitteilung", &self.message,true)
+        ].into_iter().filter(|(_,s,_)|s.len()>0);
 
         let mut e = CreateEmbed::default();
         e.title(format!("{}.",self.time))
@@ -148,7 +148,7 @@ pub struct PlanDay{
 } 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VDay(String, Vec<Lesson>);
+pub struct VDay(pub String, pub Vec<Lesson>);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Day {  

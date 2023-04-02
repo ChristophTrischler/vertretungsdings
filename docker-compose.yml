@@ -21,6 +21,8 @@ services:
     working_dir: /vertretungsbot
     env_file:
       - .env
+    depends_on:
+      - db
 
   api: 
     image:
