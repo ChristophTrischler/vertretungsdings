@@ -1,4 +1,5 @@
 
+use serenity::utils::Color;
 use serenity::builder::{CreateMessage, CreateEmbed};
 use serde::{Deserialize, Serialize};
 use chrono::naive::NaiveDate;
@@ -105,17 +106,30 @@ impl Lesson {
         }
     }
     fn to_embed(&self)->CreateEmbed{
+        let timestr = format!("{}.",self.time);
+        let emptystring = String::from(" ");
         let fields = vec![
+            (
+                timestr.as_str(),
+                &emptystring,
+                false
+            ),
             ("Fach",&self.subject,true),
             ("Raum",&self.room,true),
             ("Lehrer", &self.teacher,true),
             ("Art", &self.vtype,true),
             ("Mitteilung", &self.message,true)
-        ].into_iter().filter(|(_,s,_)|s.len()>0);
+        ].into_iter()
+        .filter(|(_,s,_)|s.len()>0);
+        
+        
 
         let mut e = CreateEmbed::default();
-        e.title(format!("{}.",self.time))
-        .fields(fields);
+        e.fields(fields);
+
+        if self.vtype.len() > 0 || self.message.len() > 0 {
+          e.color(Color::RED);
+        } 
         e
     }
 
