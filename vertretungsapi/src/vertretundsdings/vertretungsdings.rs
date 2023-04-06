@@ -240,7 +240,7 @@ impl Lesson {
     fn new(time: i64, subject: &str, room: &str, teacher: &str) -> Lesson {
         Lesson {
             class: String::new(),
-            time: time,
+            time,
             subject: subject.to_string(),
             room: room.to_string(),
             teacher: teacher.to_string(),

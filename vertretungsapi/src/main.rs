@@ -111,4 +111,3 @@ async fn main() -> std::io::Result<()> {
     log::info!("application successfully shut down gracefully");
     Ok(())
 }
-
