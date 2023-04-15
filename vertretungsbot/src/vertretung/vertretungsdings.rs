@@ -1,4 +1,5 @@
 
+use serenity::utils::Color;
 use serenity::builder::{CreateMessage, CreateEmbed};
 use serde::{Deserialize, Serialize};
 use chrono::naive::NaiveDate;
@@ -31,7 +32,7 @@ pub fn get_day(VDay(day_str, v_lessons): &VDay, plan :&Plan)->Day{
     .filter(|(i, item)| i%2==0 && item.len()==0);
  
     for (i, ls) in empty_times {
-        let normal = plan_day.lessons.get(i/2).unwrap();
+        let normal = plan_day.lessons.get(i/2).unwrap_or(&WeekOption::None);
         match normal {
             WeekOption::AandB(l) => ls.push(l.to_lesson()),
             WeekOption::A(l) => if week == 1 {
@@ -105,17 +106,30 @@ impl Lesson {
         }
     }
     fn to_embed(&self)->CreateEmbed{
+        let timestr = format!("{}.",self.time);
+        let emptystring = String::from(" ");
         let fields = vec![
+            (
+                timestr.as_str(),
+                &emptystring,
+                false
+            ),
             ("Fach",&self.subject,true),
             ("Raum",&self.room,true),
             ("Lehrer", &self.teacher,true),
             ("Art", &self.vtype,true),
             ("Mitteilung", &self.message,true)
-        ].into_iter().filter(|(_,s,_)|s.len()>0);
+        ].into_iter()
+        .filter(|(_,s,_)|s.len()>0);
+        
+        
 
         let mut e = CreateEmbed::default();
-        e.title(format!("{}.",self.time))
-        .fields(fields);
+        e.fields(fields);
+
+        if self.vtype.len() > 0 || self.message.len() > 0 {
+          e.color(Color::RED);
+        } 
         e
     }
 
@@ -153,7 +167,7 @@ pub struct VDay(pub String, pub Vec<Lesson>);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Day {  
     pub day: String,
-    pub lessons: [Vec<Lesson>; 10]
+    pub lessons: [Vec<Lesson>; 14]
 }
 
 impl Day {
