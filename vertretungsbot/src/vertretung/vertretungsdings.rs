@@ -38,7 +38,7 @@ pub fn get_day(VDay(day_str, zyklus, v_lessons): &VDay, plan: &Plan) -> Day {
         .filter(|(i, item)| i % 2 == 0 && item.len() == 0);
 
     for (i, ls) in empty_times {
-        let normal = plan_day.lessons.get(i/2).unwrap_or(&WeekOption::None);
+        let normal = plan_day.lessons.get(i / 2).unwrap_or(&WeekOption::None);
         match normal {
             WeekOption::AandB(l) => ls.push(l.to_lesson()),
             WeekOption::A(l) => match zyklus {
@@ -89,7 +89,7 @@ impl PlanLesson {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Lesson {
-    pub class : String,
+    pub class: String,
     pub time: i64,
     pub subject: String,
     pub room: String,
