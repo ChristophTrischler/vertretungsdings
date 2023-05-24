@@ -1,14 +1,18 @@
+use crate::create_weeks_list::WeekZyklusList;
 use crate::vertretundsdings::vertretungsdings::{check_change, ChangeOption};
 use crate::UpdatedList;
 use crate::VdayCache;
 use chrono::Utc;
 use log::info;
+use std::sync::Mutex;
 use std::time::Duration;
 use std::{collections::HashMap, sync::Arc};
 use tokio::{task::JoinHandle, time::sleep};
 use tokio_util::sync::CancellationToken;
 
-pub fn init_vday_cache() -> (
+pub fn init_vday_cache(
+    weeks: &Arc<Mutex<WeekZyklusList>>,
+) -> (
     Arc<VdayCache>,
     Arc<UpdatedList>,
     JoinHandle<()>,
@@ -17,7 +21,6 @@ pub fn init_vday_cache() -> (
     let cache = Arc::new(VdayCache::default());
     let updated_list = Arc::new(UpdatedList::default());
     let cancel = CancellationToken::new();
-
     (
         Arc::clone(&cache),
         Arc::clone(&updated_list),
@@ -25,6 +28,7 @@ pub fn init_vday_cache() -> (
             Arc::clone(&cache),
             Arc::clone(&updated_list),
             cancel.clone(),
+            Arc::clone(&weeks),
         )),
         cancel,
     )
@@ -34,6 +38,7 @@ async fn spawn_check_loop(
     cache: Arc<VdayCache>,
     updated_list: Arc<UpdatedList>,
     stop_signal: CancellationToken,
+    week_zyklus_list: Arc<Mutex<WeekZyklusList>>,
 ) {
     let mut times = HashMap::new();
     loop {
@@ -48,8 +53,7 @@ async fn spawn_check_loop(
                 times.insert(i, String::new());
                 times.get_mut(&i).unwrap()
             };
-
-            match check_change(i, last, &mut date).await {
+            match check_change(i, last, &mut date, Arc::clone(&week_zyklus_list)).await {
                 ChangeOption::Some(vday) => {
                     vdays_local.push(vday);
                     updated = true;
@@ -83,4 +87,3 @@ async fn spawn_check_loop(
         };
     }
 }
-

@@ -4,7 +4,12 @@ use itertools::Itertools;
 use reqwest::Client;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
-use std::env;
+use std::{
+    env,
+    sync::{Arc, Mutex},
+};
+
+use crate::create_weeks_list::{WeekZyklusList, Zyklus};
 
 #[derive(Debug)]
 pub enum ChangeOption<T> {
@@ -18,6 +23,7 @@ pub async fn check_change(
     number: i64,
     last_time: &mut String,
     last_date: &mut NaiveDate,
+    weeks_zykluses: Arc<Mutex<WeekZyklusList>>,
 ) -> ChangeOption<VDay> {
     let url = format!(
         "https://geschuetzt.bszet.de/s-lk-vw/Vertretungsplaene/V_PlanBGy/V_DC_00{}.html",
@@ -53,10 +59,13 @@ pub async fn check_change(
         .to_string();
 
     let text = res.text().await.unwrap();
-
-    let vday = match get_vday(&text, last_date) {
-        Some(vday) => vday,
-        None => return ChangeOption::None,
+    let vday = if let Ok(weeks) = weeks_zykluses.try_lock() {
+        match get_vday(&text, last_date, &weeks) {
+            Some(vday) => vday,
+            None => return ChangeOption::None,
+        }
+    } else {
+        return ChangeOption::None;
     };
 
     return match last_time.to_string().eq(this_time.as_str()) {
@@ -68,10 +77,14 @@ pub async fn check_change(
     };
 }
 
-pub fn get_vday(text: &String, last_date: &mut NaiveDate) -> Option<VDay> {
+pub fn get_vday(
+    text: &String,
+    last_date: &mut NaiveDate,
+    weeks_zykluses: &WeekZyklusList,
+) -> Option<VDay> {
     let doc = Html::parse_document(text);
 
-    let date_selection = Selector::parse(r#"h1[class="list-table-caption"]"#).unwrap();
+    let date_selection = Selector::parse("h1.list-table-caption").unwrap();
     let date = doc
         .select(&date_selection)
         .next()
@@ -88,6 +101,8 @@ pub fn get_vday(text: &String, last_date: &mut NaiveDate) -> Option<VDay> {
     } else {
         *last_date = this_date;
     }
+
+    let zyklus = weeks_zykluses.get(&this_date).unwrap_or_default();
 
     let table_body_selection = Selector::parse("tbody").unwrap();
     let table_row_selection = Selector::parse("tr").unwrap();
@@ -135,17 +150,12 @@ pub fn get_vday(text: &String, last_date: &mut NaiveDate) -> Option<VDay> {
         .unique_by(Lesson::convert_to_compareable)
         .collect();
 
-    return Some(VDay(date, v_lessons.into()));
+    return Some(VDay(date, zyklus, v_lessons.into()));
 }
 
-pub fn get_day(VDay(day_str, v_lessons): &VDay, plan: &Plan) -> Day {
+pub fn get_day(VDay(day_str, zyklus, v_lessons): &VDay, plan: &Plan) -> Day {
     let mut splits = day_str.split_whitespace().into_iter();
     let day_name = splits.next().unwrap();
-    let date_str = splits.next().unwrap();
-
-    let date = NaiveDate::parse_from_str(date_str, "%d.%m.%Y").unwrap();
-    let ref_date = NaiveDate::from_ymd_opt(2022, 8, 22).unwrap();
-    let week = date.signed_duration_since(ref_date).num_weeks() % 2 + 1;
 
     let mut res_day: Day = Day::new(&day_str.to_string());
 
@@ -174,23 +184,18 @@ pub fn get_day(VDay(day_str, v_lessons): &VDay, plan: &Plan) -> Day {
         let normal = plan_day.lessons.get(i / 2).unwrap();
         match normal {
             WeekOption::AandB(l) => ls.push(l.to_lesson()),
-            WeekOption::A(l) => {
-                if week == 1 {
-                    ls.push(l.to_lesson());
-                }
-            }
-            WeekOption::B(l) => {
-                if week == 2 {
-                    ls.push(l.to_lesson());
-                }
-            }
-            WeekOption::AorB(l1, l2) => {
-                if week == 1 {
-                    ls.push(l1.to_lesson());
-                } else {
-                    ls.push(l2.to_lesson());
-                }
-            }
+            WeekOption::A(l) => match zyklus {
+                Zyklus::I => ls.push(l.to_lesson()),
+                Zyklus::II => (),
+            },
+            WeekOption::B(l) => match zyklus {
+                Zyklus::II => ls.push(l.to_lesson()),
+                Zyklus::I => (),
+            },
+            WeekOption::AorB(l1, l2) => match zyklus {
+                Zyklus::I => ls.push(l1.to_lesson()),
+                Zyklus::II => ls.push(l2.to_lesson()),
+            },
             WeekOption::None => (),
         }
     }
@@ -298,9 +303,10 @@ pub struct PlanDay {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VDay(String, Vec<Lesson>);
+pub struct VDay(String, Zyklus, Vec<Lesson>);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+
 pub struct Day {
     pub day: String,
     pub lessons: [Vec<Lesson>; 10],
@@ -314,4 +320,3 @@ impl Day {
         }
     }
 }
-
