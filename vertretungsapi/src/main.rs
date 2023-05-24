@@ -1,4 +1,5 @@
 mod check_loop;
+mod create_weeks_list;
 mod vertretundsdings;
 
 use actix_cors::Cors;
@@ -8,13 +9,16 @@ use actix_web::{
     *,
 };
 
+use chrono::NaiveDate;
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use sqlx::Row;
 use uuid::Uuid;
 
+use std::error::Error;
 use std::sync::{Arc, Mutex};
 
 use check_loop::init_vday_cache;
+use create_weeks_list::{create_weeks_list, WeekZyklusList, Zyklus};
 use vertretundsdings::vertretungsdings::{get_day, Day, Plan, VDay};
 
 pub type VdayCache = Mutex<Vec<VDay>>;
@@ -68,14 +72,29 @@ async fn get_days_by_plan_id(
     }
 }
 
+#[get("/zyklus/{date_str}")]
+async fn get_week_zyklus_by_date(
+    date: Path<NaiveDate>,
+    week_zyklus_list: Data<Mutex<WeekZyklusList>>,
+) -> Result<impl Responder, Box<dyn Error>> {
+    let zyklus_list = week_zyklus_list.try_lock().unwrap();
+    if let Some(z) = zyklus_list.get(&date) {
+        Ok(HttpResponse::Ok().json(z))
+    } else {
+        Ok(HttpResponse::InternalServerError().json(Zyklus::default()))
+    }
+}
+
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), Box<dyn Error>> {
     dotenv::dotenv().ok();
 
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     log::info!("starting HTTP server at http://localhost:8000");
 
-    let (vdays, updated_list, handle, cancel_token) = init_vday_cache();
+    let week_list = create_weeks_list().await.expect("Err loading zyklus");
+
+    let (vdays, updated_list, handle, cancel_token) = init_vday_cache(&week_list);
 
     let pg_pool = Arc::new(
         PgPoolOptions::new()
@@ -96,12 +115,14 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::from(Arc::clone(&vdays)))
             .app_data(Data::from(Arc::clone(&updated_list)))
             .app_data(Data::from(Arc::clone(&pg_pool)))
+            .app_data(Data::from(Arc::clone(&week_list)))
             .wrap(Cors::default().allow_any_origin().allow_any_method())
             .wrap(middleware::Logger::default())
             .service(get_vdays)
             .service(updated)
             .service(get_days)
             .service(get_days_by_plan_id)
+            .service(get_week_zyklus_by_date)
     })
     .bind(("0.0.0.0", 8000))?
     .run()

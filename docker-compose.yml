@@ -23,6 +23,7 @@ services:
       - .env
     depends_on:
       - db
+      - api
 
   api: 
     image:
