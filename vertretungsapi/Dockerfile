@@ -17,6 +17,6 @@ RUN apt-get update && \
     apt-get install ca-certificates -y && \
     apt-get clean && \
     update-ca-certificates
-ENV RUST_LOG "lopdf = warn"
+ENV RUST_LOG "info, lopdf=off"
 COPY --from=builder /vertretungsapi/target/release/vertretungsapi /usr/bin/
 CMD [ "/usr/bin/vertretungsapi" ] 

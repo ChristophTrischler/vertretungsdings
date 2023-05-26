@@ -37,18 +37,25 @@ async fn updated(id: Path<Uuid>, update_list: Data<UpdatedList>) -> impl Respond
 }
 
 #[get("/vdays")]
-async fn get_vdays(vdays: Data<VdayCache>) -> actix_web::Result<impl Responder> {
-    let data = vdays.try_lock().unwrap();
-    let vdays: &Vec<VDay> = data.as_ref();
-    Ok(HttpResponse::Ok().json(&vdays))
+async fn get_vdays(vdays: Data<VdayCache>) -> impl Responder {
+    match vdays.try_lock() {
+        Ok(data) => {
+            let days: &Vec<VDay> = data.as_ref();
+            HttpResponse::Ok().json(days)
+        }
+        _ => HttpResponse::InternalServerError().json(Vec::<VDay>::new()),
+    }
 }
 
 #[post("/days")]
 async fn get_days(plan: Json<Plan>, vdays_data: Data<VdayCache>) -> impl Responder {
-    let vdays = vdays_data.try_lock().unwrap();
-    let days: Vec<Day> = vdays.iter().map(|v| get_day(v, &plan)).collect();
-    println!("{:?}", days);
-    HttpResponse::Ok().json(days)
+    match vdays_data.try_lock() {
+        Ok(vdays) => {
+            let days: Vec<Day> = vdays.iter().map(|v| get_day(v, &plan)).collect();
+            HttpResponse::Ok().json(days)
+        }
+        _ => HttpResponse::InternalServerError().json(Vec::<Day>::new()),
+    }
 }
 
 #[get("/days/{plan_id}")]
@@ -57,31 +64,41 @@ async fn get_days_by_plan_id(
     dbconnection: Data<PgPool>,
     vdays_data: Data<VdayCache>,
 ) -> impl Responder {
-    let query_result = sqlx::query("SELECT \"data\" FROM \"user\" WHERE \"discord_id\" = $1")
-        .bind(plan_id.as_ref())
-        .fetch_one(dbconnection.as_ref())
-        .await;
-    if let Ok(row) = query_result {
-        let data: String = row.try_get(0).unwrap();
-        let plan: Plan = serde_json::from_str(&data).unwrap();
-        let vdays = vdays_data.try_lock().unwrap();
-        let days: Vec<Day> = vdays.iter().map(|vday| get_day(vday, &plan)).collect();
-        HttpResponse::Ok().json(days)
-    } else {
-        HttpResponse::BadRequest().body("[]")
+    match days_by_plan_id(plan_id.as_ref(), dbconnection, vdays_data).await {
+        Ok(days) => HttpResponse::Ok().json(days),
+        Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
     }
+}
+
+async fn days_by_plan_id(
+    plan_id: &i64,
+    dbconnection: Data<PgPool>,
+    vdays_data: Data<VdayCache>,
+) -> Result<Vec<Day>, Box<dyn Error>> {
+    let row = sqlx::query("SELECT \"data\" FROM \"user\" WHERE \"discord_id\" = $1")
+        .bind(plan_id)
+        .fetch_one(dbconnection.as_ref())
+        .await?;
+    let str_data_plan = row.try_get(0)?;
+    let plan: Plan = serde_json::from_str(str_data_plan)?;
+    let vdays_res = vdays_data.try_lock().map_err(|err| err.to_string())?;
+    let vdays_vec: &Vec<VDay> = &vdays_res.as_ref();
+    let days: Vec<Day> = vdays_vec.iter().map(|vday| get_day(vday, &plan)).collect();
+    Ok(days)
 }
 
 #[get("/zyklus/{date_str}")]
 async fn get_week_zyklus_by_date(
     date: Path<NaiveDate>,
     week_zyklus_list: Data<Mutex<WeekZyklusList>>,
-) -> Result<impl Responder, Box<dyn Error>> {
-    let zyklus_list = week_zyklus_list.try_lock().unwrap();
-    if let Some(z) = zyklus_list.get(&date) {
-        Ok(HttpResponse::Ok().json(z))
-    } else {
-        Ok(HttpResponse::InternalServerError().json(Zyklus::default()))
+) -> impl Responder {
+    match week_zyklus_list
+        .try_lock()
+        .ok()
+        .and_then(|zl| zl.get(&date))
+    {
+        Some(z) => HttpResponse::Ok().json(z),
+        None => HttpResponse::InternalServerError().json(":|"),
     }
 }
 

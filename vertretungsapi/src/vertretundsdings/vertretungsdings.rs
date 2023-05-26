@@ -181,22 +181,23 @@ pub fn get_day(VDay(day_str, zyklus, v_lessons): &VDay, plan: &Plan) -> Day {
         .filter(|(i, item)| i % 2 == 0 && item.len() == 0);
 
     for (i, ls) in empty_times {
-        let normal = plan_day.lessons.get(i / 2).unwrap();
-        match normal {
-            WeekOption::AandB(l) => ls.push(l.to_lesson()),
-            WeekOption::A(l) => match zyklus {
-                Zyklus::I => ls.push(l.to_lesson()),
-                Zyklus::II => (),
-            },
-            WeekOption::B(l) => match zyklus {
-                Zyklus::II => ls.push(l.to_lesson()),
-                Zyklus::I => (),
-            },
-            WeekOption::AorB(l1, l2) => match zyklus {
-                Zyklus::I => ls.push(l1.to_lesson()),
-                Zyklus::II => ls.push(l2.to_lesson()),
-            },
-            WeekOption::None => (),
+        if let Some(normal) = plan_day.lessons.get(i / 2) {
+            match normal {
+                WeekOption::AandB(l) => ls.push(l.to_lesson()),
+                WeekOption::A(l) => match zyklus {
+                    Zyklus::I => ls.push(l.to_lesson()),
+                    Zyklus::II => (),
+                },
+                WeekOption::B(l) => match zyklus {
+                    Zyklus::II => ls.push(l.to_lesson()),
+                    Zyklus::I => (),
+                },
+                WeekOption::AorB(l1, l2) => match zyklus {
+                    Zyklus::I => ls.push(l1.to_lesson()),
+                    Zyklus::II => ls.push(l2.to_lesson()),
+                },
+                WeekOption::None => (),
+            }
         }
     }
     return res_day;
@@ -279,7 +280,7 @@ impl Lesson {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Plan {
     pub class_name: String,
     pub days: Vec<PlanDay>,
