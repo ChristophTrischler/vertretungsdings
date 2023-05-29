@@ -51,7 +51,7 @@ async fn get_vdays(vdays: Data<VdayCache>) -> impl Responder {
 async fn get_days(plan: Json<Plan>, vdays_data: Data<VdayCache>) -> impl Responder {
     match vdays_data.try_lock() {
         Ok(vdays) => {
-            let days: Vec<Day> = vdays.iter().map(|v| get_day(v, &plan)).collect();
+            let days: Vec<Day> = vdays.iter().map(|v| get_day(v, &plan)).flatten().collect();
             HttpResponse::Ok().json(days)
         }
         _ => HttpResponse::InternalServerError().json(Vec::<Day>::new()),
@@ -83,7 +83,11 @@ async fn days_by_plan_id(
     let plan: Plan = serde_json::from_str(str_data_plan)?;
     let vdays_res = vdays_data.try_lock().map_err(|err| err.to_string())?;
     let vdays_vec: &Vec<VDay> = &vdays_res.as_ref();
-    let days: Vec<Day> = vdays_vec.iter().map(|vday| get_day(vday, &plan)).collect();
+    let days: Vec<Day> = vdays_vec
+        .iter()
+        .map(|vday| get_day(vday, &plan))
+        .flatten()
+        .collect();
     Ok(days)
 }
 
@@ -135,6 +139,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .app_data(Data::from(Arc::clone(&week_list)))
             .wrap(Cors::default().allow_any_origin().allow_any_method())
             .wrap(middleware::Logger::default())
+<<<<<<< Updated upstream
+=======
+            .wrap(Cors::default().allow_any_origin().allow_any_method())
+>>>>>>> Stashed changes
             .service(get_vdays)
             .service(updated)
             .service(get_days)

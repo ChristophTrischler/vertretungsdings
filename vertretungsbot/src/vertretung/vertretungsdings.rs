@@ -26,11 +26,12 @@ pub fn get_day(VDay(day_str, zyklus, v_lessons): &VDay, plan: &Plan) -> Day {
             .push(v_lesson.clone());
     }
 
+    let default_plan_day = PlanDay::default();
     let plan_day = plan
         .days
         .iter()
         .find(|item| item.day.contains(day_name))
-        .unwrap();
+        .unwrap_or(&default_plan_day);
     let empty_times = res_day
         .lessons
         .iter_mut()
@@ -102,7 +103,7 @@ impl Lesson {
     fn new(time: i64, subject: &str, room: &str, teacher: &str) -> Lesson {
         Lesson {
             class: String::new(),
-            time: time,
+            time,
             subject: subject.to_string(),
             room: room.to_string(),
             teacher: teacher.to_string(),
@@ -145,7 +146,7 @@ impl Lesson {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Plan {
     pub class_name: String,
     pub days: Vec<PlanDay>,

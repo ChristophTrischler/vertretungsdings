@@ -84,17 +84,16 @@ pub fn get_vday(
 ) -> Option<VDay> {
     let doc = Html::parse_document(text);
 
-    let date_selection = Selector::parse("h1.list-table-caption").unwrap();
+    let date_selection = Selector::parse("h1.list-table-caption").ok()?;
     let date = doc
         .select(&date_selection)
-        .next()
-        .unwrap()
+        .next()?
         .inner_html()
         .trim()
         .to_string();
 
-    let date_str = date.split_whitespace().last().unwrap();
-    let this_date = NaiveDate::parse_from_str(date_str, "%d.%m.%Y").unwrap();
+    let date_str = date.split_whitespace().last()?;
+    let this_date = NaiveDate::parse_from_str(date_str, "%d.%m.%Y").ok()?;
 
     if this_date <= *last_date {
         return None;
@@ -110,7 +109,7 @@ pub fn get_vday(
 
     let mut v_lessons: Vec<Lesson> = Vec::new();
 
-    let table = doc.select(&table_body_selection).next().unwrap();
+    let table = doc.select(&table_body_selection).next()?;
 
     for row in table.select(&table_row_selection) {
         let fields = row.select(&table_field_selection);
@@ -119,30 +118,25 @@ pub fn get_vday(
             .map(|item| item.inner_html().trim().to_string())
             .collect();
         if row.inner_html().contains("&nbsp;") {
-            let last_lesson = v_lessons.last().unwrap().to_vec();
+            let last_lesson = v_lessons.last()?.to_vec();
             for (i, s) in &mut content_fields
                 .iter_mut()
                 .enumerate()
                 .filter(|(_i, s)| s.contains("&nbsp;"))
             {
-                let replacement = last_lesson.get(i).unwrap();
+                let replacement = last_lesson.get(i)?;
                 *s = replacement.to_string();
             }
         }
 
         v_lessons.push(Lesson {
-            class: content_fields.get(0).unwrap().into(),
-            time: content_fields
-                .get(1)
-                .unwrap()
-                .trim_end_matches('.')
-                .parse()
-                .unwrap(),
-            subject: content_fields.get(2).unwrap().into(),
-            room: content_fields.get(3).unwrap().into(),
-            teacher: content_fields.get(4).unwrap().into(),
-            vtype: content_fields.get(5).unwrap().into(),
-            message: content_fields.get(6).unwrap().into(),
+            class: content_fields.get(0)?.into(),
+            time: content_fields.get(1)?.trim_end_matches('.').parse().ok()?,
+            subject: content_fields.get(2)?.into(),
+            room: content_fields.get(3)?.into(),
+            teacher: content_fields.get(4)?.into(),
+            vtype: content_fields.get(5)?.into(),
+            message: content_fields.get(6)?.into(),
         });
     }
     v_lessons = v_lessons
@@ -153,9 +147,9 @@ pub fn get_vday(
     return Some(VDay(date, zyklus, v_lessons.into()));
 }
 
-pub fn get_day(VDay(day_str, zyklus, v_lessons): &VDay, plan: &Plan) -> Day {
+pub fn get_day(VDay(day_str, zyklus, v_lessons): &VDay, plan: &Plan) -> Option<Day> {
     let mut splits = day_str.split_whitespace().into_iter();
-    let day_name = splits.next().unwrap();
+    let day_name = splits.next()?;
 
     let mut res_day: Day = Day::new(&day_str.to_string());
 
@@ -164,16 +158,12 @@ pub fn get_day(VDay(day_str, zyklus, v_lessons): &VDay, plan: &Plan) -> Day {
     }) {
         res_day
             .lessons
-            .get_mut((v_lesson.time - 1) as usize)
-            .unwrap()
+            .get_mut((v_lesson.time - 1) as usize)?
             .push(v_lesson.clone());
     }
 
-    let plan_day = plan
-        .days
-        .iter()
-        .find(|item| item.day.contains(day_name))
-        .unwrap();
+    let plan_day = plan.days.iter().find(|item| item.day.contains(day_name))?;
+
     let empty_times = res_day
         .lessons
         .iter_mut()
@@ -200,7 +190,7 @@ pub fn get_day(VDay(day_str, zyklus, v_lessons): &VDay, plan: &Plan) -> Day {
             }
         }
     }
-    return res_day;
+    Some(res_day)
 }
 
 fn is_in(string: &str, vec: &Vec<String>) -> bool {

@@ -1,6 +1,8 @@
 use chrono::NaiveDate;
+use futures::TryFutureExt;
 use log::info;
 use lopdf::Document;
+use reqwest::Response;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -108,7 +110,7 @@ impl WeekZyklusList {
     pub async fn new() -> Result<Self, Box<dyn Error>> {
         info!("new WeekZyklus");
         let url = "https://frei.bszet.de/index.php?dir=/Blockplaene/BGy";
-        let buf = reqwest::get(url).await?.text().await?;
+        let buf = reqwest::get(url).and_then(Response::text).await?;
         let doc = Html::parse_document(&buf);
         let item_selector = Selector::parse("td.FileListCellText")?;
         let a_selector = Selector::parse("a")?;

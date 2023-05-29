@@ -2,8 +2,10 @@ use reqwest::{Client, Response};
 use serenity::futures::TryFutureExt;
 use serenity::model::id::UserId;
 use serenity::{prelude::*, CacheAndHttp};
+use sqlx::postgres::PgRow;
 use sqlx::Row;
 use std::env;
+use std::error::Error;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::task::JoinHandle;
@@ -36,7 +38,7 @@ async fn check_loop(
 ) {
     let client = Client::new();
     let id = Uuid::new_v4().to_string();
-    let base_url = env::var("API_HOST").unwrap();
+    let base_url = env::var("API_HOST").expect("API_HOST missing in env");
     let http = arc_http.as_ref();
     loop {
         let update = client
@@ -44,7 +46,7 @@ async fn check_loop(
             .send()
             .and_then(Response::json)
             .await
-            .unwrap_or_default();
+            .unwrap_or(false);
 
         info!("update: {update}");
 
@@ -58,38 +60,23 @@ async fn check_loop(
 
             let connection = {
                 let data_read = arc_data.read().await;
-                data_read.get::<DBConnection>().unwrap().clone()
+                match data_read.get::<DBConnection>() {
+                    Some(c) => c.clone(),
+                    _ => continue,
+                }
             };
 
             let query = sqlx::query(
                 "SELECT \"discord_id\", \"embed\", \"data\" FROM \"user\" WHERE \"active\" = true",
             );
-            let rows = query.fetch_all(connection.as_ref()).await.unwrap();
+            let rows = query
+                .fetch_all(connection.as_ref())
+                .await
+                .unwrap_or_default();
 
             for row in rows {
-                let id: i64 = row.try_get(0).unwrap_or_default();
-                let embed_activated: bool = row.try_get(1).unwrap_or_default();
-                let data = row.try_get(2).unwrap_or_default();
-
-                let user = UserId(id as u64).to_user(http).await.unwrap_or_default();
-
-                let plan: Plan = serde_json::from_str(data).unwrap();
-
-                for vday in &vdays {
-                    let day = get_day(vday, &plan);
-                    if let Err(why) = user
-                        .direct_message(http, |m| {
-                            if embed_activated {
-                                day.to_embed(m);
-                                m
-                            } else {
-                                m.content(day.to_string())
-                            }
-                        })
-                        .await
-                    {
-                        error!("Error sending dm: {:?}", why);
-                    }
+                if let Err(e) = read_db_row_and_message(row, http, &vdays).await {
+                    error!("err sendig dm: {:#?}", e);
                 }
             }
         }
@@ -107,4 +94,32 @@ async fn check_loop(
             }
         };
     }
+}
+
+async fn read_db_row_and_message(
+    row: PgRow,
+    http: &CacheAndHttp,
+    vdays: &Vec<VDay>,
+) -> Result<(), Box<dyn Error>> {
+    let id: i64 = row.try_get(0)?;
+    let embed_activated: bool = row.try_get(1)?;
+    let data = row.try_get(2)?;
+
+    let user = UserId(id as u64).to_user(http).await?;
+
+    let plan: Plan = serde_json::from_str(data)?;
+
+    for vday in vdays {
+        let day = get_day(vday, &plan);
+        user.direct_message(http, |m| {
+            if embed_activated {
+                day.to_embed(m);
+                m
+            } else {
+                m.content(day.to_string())
+            }
+        })
+        .await?;
+    }
+    Ok(())
 }
