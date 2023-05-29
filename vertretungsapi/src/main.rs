@@ -139,10 +139,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .app_data(Data::from(Arc::clone(&week_list)))
             .wrap(Cors::default().allow_any_origin().allow_any_method())
             .wrap(middleware::Logger::default())
-<<<<<<< Updated upstream
-=======
-            .wrap(Cors::default().allow_any_origin().allow_any_method())
->>>>>>> Stashed changes
             .service(get_vdays)
             .service(updated)
             .service(get_days)
