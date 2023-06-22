@@ -8,18 +8,18 @@ use std::sync::Arc;
 use commands::checker::init_check_loop;
 use serenity::async_trait;
 use serenity::client::bridge::gateway::ShardManager;
-use serenity::framework::standard::macros::{group};
+use serenity::framework::standard::macros::group;
 use serenity::framework::StandardFramework;
 use serenity::http::Http;
 use serenity::model::event::ResumedEvent;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
-use tracing::{error, info}; 
-use sqlx::{postgres::{PgPool,PgPoolOptions, PgConnectOptions}};
+use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
+use tracing::{error, info};
 
 use crate::commands::send_plan::*;
-use crate::commands::update::*;
 use crate::commands::setter::*;
+use crate::commands::update::*;
 pub struct ShardManagerContainer;
 
 impl TypeMapKey for ShardManagerContainer {
@@ -32,7 +32,6 @@ impl TypeMapKey for DBConnection {
 }
 
 struct Handler;
-
 
 #[async_trait]
 impl EventHandler for Handler {
@@ -49,9 +48,8 @@ impl EventHandler for Handler {
 #[commands(send_plan, update, set, embed)]
 struct General;
 
-
 #[tokio::main]
-async fn main() {   
+async fn main() {
     dotenv::dotenv().ok();
 
     tracing_subscriber::fmt::init();
@@ -67,14 +65,13 @@ async fn main() {
             owners.insert(info.owner.id);
 
             (owners, info.id)
-        },
+        }
         Err(why) => panic!("Could not access application info: {:?}", why),
     };
 
     // Create the framework
-    let framework =
-        StandardFramework::new().configure(|c| c.owners(owners)
-        .prefix("!"))
+    let framework = StandardFramework::new()
+        .configure(|c| c.owners(owners).prefix("!"))
         .group(&GENERAL_GROUP);
 
     let intents = GatewayIntents::GUILD_MESSAGES
@@ -92,28 +89,27 @@ async fn main() {
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
         data.insert::<DBConnection>(Arc::new(
             PgPoolOptions::new()
-            .max_connections(15)
-            .connect_with(
-                PgConnectOptions::new()
-                .host("db")
-                .database("vertretungsdings")
-                .username("postgres")
-                .password("pass")
-            )
-            .await.expect("error to connect to DB"))
-        );
-    }        
+                .max_connections(15)
+                .connect_with(
+                    PgConnectOptions::new()
+                        .host("db")
+                        .database("vertretungsdings")
+                        .username("postgres")
+                        .password("pass"),
+                )
+                .await
+                .expect("error to connect to DB"),
+        ));
+    }
     let shard_manager = client.shard_manager.clone();
 
-    
+    let (loop_handle, loop_stop) =
+        init_check_loop(Arc::clone(&client.cache_and_http), Arc::clone(&client.data));
 
-    let (loop_handle, loop_stop) = init_check_loop(
-        Arc::clone(&client.cache_and_http),
-        Arc::clone(&client.data)
-    );
-
-    tokio::spawn(async move {   
-        tokio::signal::ctrl_c().await.expect("Could not register ctrl+c handler");  
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Could not register ctrl+c handler");
         shard_manager.lock().await.shutdown_all().await;
         loop_stop.cancel();
         loop_handle.await.expect("couldn't stop loop nice");

@@ -18,7 +18,7 @@ use std::error::Error;
 use std::sync::{Arc, Mutex};
 
 use check_loop::init_vday_cache;
-use create_weeks_list::{create_weeks_list, WeekZyklusList, Zyklus};
+use create_weeks_list::{create_weeks_list, WeekZyklusList};
 use vertretundsdings::vertretungsdings::{get_day, Day, Plan, VDay};
 
 pub type VdayCache = Mutex<Vec<VDay>>;
@@ -28,9 +28,10 @@ pub type UpdatedList = Mutex<Vec<Uuid>>;
 async fn updated(id: Path<Uuid>, update_list: Data<UpdatedList>) -> impl Responder {
     let mut val = true;
     if let Ok(mut list) = update_list.try_lock() {
-        match list.contains(&id) {
-            true => val = false,
-            false => list.push(*id),
+        if list.contains(&id) {
+            val = false;
+        } else {
+            list.push(*id);
         }
     }
     HttpResponse::Ok().json(val)
@@ -51,7 +52,7 @@ async fn get_vdays(vdays: Data<VdayCache>) -> impl Responder {
 async fn get_days(plan: Json<Plan>, vdays_data: Data<VdayCache>) -> impl Responder {
     match vdays_data.try_lock() {
         Ok(vdays) => {
-            let days: Vec<Day> = vdays.iter().map(|v| get_day(v, &plan)).collect();
+            let days: Vec<Day> = vdays.iter().map(|v| get_day(v, &plan)).flatten().collect();
             HttpResponse::Ok().json(days)
         }
         _ => HttpResponse::InternalServerError().json(Vec::<Day>::new()),
@@ -83,7 +84,11 @@ async fn days_by_plan_id(
     let plan: Plan = serde_json::from_str(str_data_plan)?;
     let vdays_res = vdays_data.try_lock().map_err(|err| err.to_string())?;
     let vdays_vec: &Vec<VDay> = &vdays_res.as_ref();
-    let days: Vec<Day> = vdays_vec.iter().map(|vday| get_day(vday, &plan)).collect();
+    let days: Vec<Day> = vdays_vec
+        .iter()
+        .map(|vday| get_day(vday, &plan))
+        .flatten()
+        .collect();
     Ok(days)
 }
 
@@ -98,7 +103,7 @@ async fn get_week_zyklus_by_date(
         .and_then(|zl| zl.get(&date))
     {
         Some(z) => HttpResponse::Ok().json(z),
-        None => HttpResponse::InternalServerError().json(":|"),
+        None => HttpResponse::InternalServerError().json("[]"),
     }
 }
 
@@ -124,7 +129,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     .password("pass"),
             )
             .await
-            .expect("Err creating client"),
+            .expect("Err connecting db"),
     );
 
     HttpServer::new(move || {
