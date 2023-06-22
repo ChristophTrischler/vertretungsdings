@@ -81,8 +81,6 @@ async fn check_loop(
             }
         }
 
-        info!("checked for updates");
-
         tokio::select! {
             _ = sleep(MIN) => {
                 continue;
