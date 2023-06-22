@@ -18,7 +18,7 @@ use std::error::Error;
 use std::sync::{Arc, Mutex};
 
 use check_loop::init_vday_cache;
-use create_weeks_list::{create_weeks_list, WeekZyklusList, Zyklus};
+use create_weeks_list::{create_weeks_list, WeekZyklusList};
 use vertretundsdings::vertretungsdings::{get_day, Day, Plan, VDay};
 
 pub type VdayCache = Mutex<Vec<VDay>>;
@@ -28,9 +28,10 @@ pub type UpdatedList = Mutex<Vec<Uuid>>;
 async fn updated(id: Path<Uuid>, update_list: Data<UpdatedList>) -> impl Responder {
     let mut val = true;
     if let Ok(mut list) = update_list.try_lock() {
-        match list.contains(&id) {
-            true => val = false,
-            false => list.push(*id),
+        if list.contains(&id) {
+            val = false;
+        } else {
+            list.push(*id);
         }
     }
     HttpResponse::Ok().json(val)
@@ -102,7 +103,7 @@ async fn get_week_zyklus_by_date(
         .and_then(|zl| zl.get(&date))
     {
         Some(z) => HttpResponse::Ok().json(z),
-        None => HttpResponse::InternalServerError().json(":|"),
+        None => HttpResponse::InternalServerError().json("[]"),
     }
 }
 
@@ -128,7 +129,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     .password("pass"),
             )
             .await
-            .expect("Err creating client"),
+            .expect("Err connecting db"),
     );
 
     HttpServer::new(move || {
