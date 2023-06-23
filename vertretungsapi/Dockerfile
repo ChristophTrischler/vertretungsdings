@@ -1,7 +1,7 @@
 FROM rust:latest AS chef 
 RUN cargo install cargo-chef
 RUN dpkg --add-architecture armhf
-RUN apt-get update && apt-get install -y openssl:armhf libssl-dev:armhf crossbuild-essential-armhf
+RUN apt-get update && apt-get install -y  crossbuild-essential-armhf
 ENV PKG_CONFIG_SYSROOT_DIR "/usr/lib/arm-linux-gnueabihf/" 
 RUN rustup target add armv7-unknown-linux-gnueabihf
 WORKDIR /vertretungsapi
@@ -21,10 +21,6 @@ RUN cargo build --release --target armv7-unknown-linux-gnueabihf --bin vertretun
 
 FROM --platform=linux/arm32 arm32v7/debian:latest as runtime
 WORKDIR /vertretungsapi
-RUN apt-get update && \ 
-    apt-get install ca-certificates -y && \
-    apt-get clean && \
-    update-ca-certificates
 ENV RUST_LOG "info, lopdf=off"
 COPY --from=builder /vertretungsapi/target/armv7-unknown-linux-gnueabihf/release/vertretungsapi /usr/bin/
 CMD [ "/usr/bin/vertretungsapi" ] 

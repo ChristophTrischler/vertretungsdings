@@ -48,8 +48,6 @@ async fn check_loop(
             .await
             .unwrap_or(false);
 
-        info!("update: {update}");
-
         if update {
             let vdays: Vec<VDay> = client
                 .get(format!("{base_url}/vdays"))
