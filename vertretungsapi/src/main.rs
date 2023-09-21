@@ -10,7 +10,7 @@ use actix_web::{
 };
 
 use chrono::NaiveDate;
-use sqlx::postgres::{PgConnectOptions, PgPoolOptions, PgPool};
+use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use sqlx::Row;
 use uuid::Uuid;
 
@@ -24,7 +24,7 @@ use vertretundsdings::vertretungsdings::{get_day, Day, Plan, VDay};
 pub type VdayCache = Mutex<Vec<VDay>>;
 pub type UpdatedList = Mutex<Vec<Uuid>>;
 
-#[get("/update/{id}")]
+#[actix_web::get("/update/{id}")]
 async fn updated(id: Path<Uuid>, update_list: Data<UpdatedList>) -> impl Responder {
     let mut val = true;
     if let Ok(mut list) = update_list.try_lock() {
@@ -37,7 +37,7 @@ async fn updated(id: Path<Uuid>, update_list: Data<UpdatedList>) -> impl Respond
     HttpResponse::Ok().json(val)
 }
 
-#[get("/vdays")]
+#[actix_web::get("/vdays")]
 async fn get_vdays(vdays: Data<VdayCache>) -> impl Responder {
     match vdays.try_lock() {
         Ok(data) => {
@@ -48,7 +48,7 @@ async fn get_vdays(vdays: Data<VdayCache>) -> impl Responder {
     }
 }
 
-#[post("/days")]
+#[actix_web::post("/days")]
 async fn get_days(plan: Json<Plan>, vdays_data: Data<VdayCache>) -> impl Responder {
     match vdays_data.try_lock() {
         Ok(vdays) => {
@@ -59,7 +59,7 @@ async fn get_days(plan: Json<Plan>, vdays_data: Data<VdayCache>) -> impl Respond
     }
 }
 
-#[get("/days/{plan_id}")]
+#[actix_web::get("/days/{plan_id}")]
 async fn get_days_by_plan_id(
     plan_id: Path<i64>,
     dbconnection: Data<PgPool>,
@@ -92,7 +92,7 @@ async fn days_by_plan_id(
     Ok(days)
 }
 
-#[get("/zyklus/{date_str}")]
+#[actix_web::get("/zyklus/{date_str}")]
 async fn get_week_zyklus_by_date(
     date: Path<NaiveDate>,
     week_zyklus_list: Data<Mutex<WeekZyklusList>>,
@@ -140,14 +140,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .app_data(Data::from(Arc::clone(&week_list)))
             .wrap(Cors::default().allow_any_origin().allow_any_method())
             .wrap(middleware::Logger::default())
-            .wrap(
-                Cors::default()
-                .allow_any_origin()
-                .allow_any_method() 
-            )
+            .wrap(Cors::default().allow_any_origin().allow_any_method())
             .service(get_vdays)
             .service(updated)
-            .service(get_days) 
+            .service(get_days)
             .service(get_days_by_plan_id)
             .service(get_week_zyklus_by_date)
     })

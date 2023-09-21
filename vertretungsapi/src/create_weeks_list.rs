@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 use futures::TryFutureExt;
 use log::info;
-use lopdf::Document;
+use pdf_extract;
 use reqwest::Response;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
@@ -139,13 +139,16 @@ impl WeekZyklusList {
 
     pub async fn add(&mut self, pdf_url: &str) -> Result<(), Box<dyn Error>> {
         info!("added date from {pdf_url} to list");
-        let text: &str = {
+        let text: String = {
             let buf = reqwest::get(pdf_url).await?.bytes().await?;
-            let doc = Document::load_mem(&buf)?;
-            &doc.extract_text(&[1])?
+            pdf_extract::extract_text_from_mem(&buf)?
         };
         let mut days = FirstAndLast::new();
-        for line in text.split_terminator('\n') {
+        for line in text
+            .split_terminator('\n')
+            .map(|s| s.split_whitespace())
+            .flatten()
+        {
             match ConvertedOption::convert(line) {
                 ConvertedOption::None => (),
                 ConvertedOption::Date(d) => days.push(d),
